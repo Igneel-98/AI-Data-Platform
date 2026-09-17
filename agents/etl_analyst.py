@@ -3,7 +3,7 @@ import sys
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from utils.llm_pick import pick_llm
+from utils.llm_pick import pick_llm, extract_text
 from utils.etl_tools import ETLTools
 from Models.schema import ETLAgentSchema
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
@@ -70,7 +70,7 @@ def transform_load_tool(input_file_path:str,output_folder:str,output_format:str,
 
         """
 
-    response = llm.invoke(prompt).content 
+    response = extract_text(llm.invoke(prompt).content) 
 
     # Optional Cleaning
     pandas_code = response.strip().strip('```').strip().lstrip('python').strip()

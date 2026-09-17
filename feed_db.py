@@ -19,6 +19,8 @@ DB_CONFIG = {
     "user": os.environ['user'],
     "password": os.environ['password'],
 }
+if 'sslmode' in os.environ:
+    DB_CONFIG['sslmode'] = os.environ['sslmode']
 
 CSV_DIR = "data"
 

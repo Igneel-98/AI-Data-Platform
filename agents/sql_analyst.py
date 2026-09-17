@@ -6,7 +6,7 @@ import pandas as pd
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from utils.llm_pick import pick_llm
+from utils.llm_pick import pick_llm, extract_text
 from utils.database import DatabaseUtil
 from utils.sql_validator import validate_sql_safety
 from Models.schema import AgentSchema, JudgeSchema
@@ -19,7 +19,7 @@ from langgraph.graph import StateGraph, START, END
 def curate_ques(state: AgentSchema) -> AgentSchema: 
     user_question = state.user_question
     llm = pick_llm("low")
-    response = llm.invoke(f"Curate and clarify the following data question for SQL analysis: {user_question}").content
+    response = extract_text(llm.invoke(f"Curate and clarify the following data question for SQL analysis: {user_question}").content)
 
     state.curated_ques = response
     state.messages = state.messages + [HumanMessage(content=f"{response}")]
@@ -36,6 +36,8 @@ def prompt_query_context(state: AgentSchema) -> AgentSchema:
         "password": os.environ.get('password', 'potgres'),
         "dbname": os.environ.get('database', os.environ.get('dbname', 'postgres'))
     }
+    if os.environ.get('sslmode'):
+        conn_details['sslmode'] = os.environ.get('sslmode')
 
     obj = DatabaseUtil(conn_details)
     schema_info = obj.schema_details("public")
@@ -73,7 +75,7 @@ def generate_sql(state: AgentSchema) -> AgentSchema:
         """
 
     llm = pick_llm("medium")
-    generated_sql = llm.invoke(prompt).content.strip()
+    generated_sql = extract_text(llm.invoke(prompt).content).strip()
     
     # Clean possible markdown ticks
     cleaned_sql = generated_sql.strip('`').lstrip('sql').strip()
@@ -132,6 +134,8 @@ def execute_sql(state: AgentSchema) -> AgentSchema:
         "password": os.environ.get('password', 'potgres'),
         "dbname": os.environ.get('database', os.environ.get('dbname', 'postgres'))
     }
+    if os.environ.get('sslmode'):
+        conn_details['sslmode'] = os.environ.get('sslmode')
 
     obj = DatabaseUtil(conn_details)
     rows_dict, err = obj.execute_sql(sql_query)
@@ -178,7 +182,7 @@ def represent_final_answer(state: AgentSchema) -> AgentSchema:
     If an error occurred after retries, explain what went wrong politely and suggest how the user might rephrase.
     """
 
-    llm_response = llm.invoke(prompt).content
+    llm_response = extract_text(llm.invoke(prompt).content)
     state.final_answer = llm_response
     state.messages = state.messages + [AIMessage(content=llm_response)]
     return state

@@ -6,6 +6,7 @@ import json
 import os
 from langchain_core.messages import HumanMessage, AIMessage
 from agents.data_agent import data_agent
+from utils.observability import get_active_callbacks
 
 st.set_page_config(
     page_title="AI Data Agent | Multi-Agent Analytics",
@@ -104,11 +105,11 @@ for msg in st.session_state.messages:
         # Display dataframes if stored in history
         if "data" in msg and msg["data"]:
             df_history = pd.DataFrame(msg["data"])
-            st.dataframe(df_history, use_container_width=True)
+            st.dataframe(df_history, width='stretch')
             
             # Show chart if applicable
             if "chart" in msg and msg["chart"]:
-                st.plotly_chart(msg["chart"], use_container_width=True)
+                st.plotly_chart(msg["chart"], width='stretch')
                 
             csv_bytes = df_history.to_csv(index=False).encode('utf-8')
             st.download_button(
@@ -135,10 +136,12 @@ if user_prompt:
         try:
             status_box.write("🔄 **Router Node:** Classifying user intent...")
             
+            callbacks = get_active_callbacks()
+            invoke_config = {"callbacks": callbacks} if callbacks else {}
             response = data_agent.invoke({
                 "messages": [HumanMessage(content=user_prompt)],
                 "route_response": ""
-            })
+            }, config=invoke_config)
             
             route = response.get("route_response", "sql")
             status_box.write(f"✅ Routed to: **{route.upper()} Analyst Agent**")
@@ -166,7 +169,7 @@ if user_prompt:
             if structured_data and len(structured_data) > 0:
                 df = pd.DataFrame(structured_data)
                 st.markdown("#### 📊 Query Result Preview")
-                st.dataframe(df, use_container_width=True)
+                st.dataframe(df, width='stretch')
 
                 # Auto-generate chart if numerical & categorical columns exist
                 num_cols = df.select_dtypes(include=['number', 'float', 'int']).columns.tolist()
@@ -184,7 +187,7 @@ if user_prompt:
                         template="plotly_white"
                     )
                     fig.update_layout(margin=dict(l=20, r=20, t=40, b=20))
-                    st.plotly_chart(fig, use_container_width=True)
+                    st.plotly_chart(fig, width='stretch')
                     chart_obj = fig
 
                 # 1-Click CSV Download Button

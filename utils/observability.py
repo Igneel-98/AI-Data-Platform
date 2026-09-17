@@ -19,11 +19,19 @@ try:
     logfire_token = os.environ.get("LOGFIRE_TOKEN")
     if logfire_token:
         logfire.configure(token=logfire_token)
+        try:
+            logfire.instrument_pydantic()
+        except Exception:
+            pass
         _logfire_initialized = True
-        logger.info("⚡ Pydantic Logfire successfully configured.")
+        logger.info("⚡ Pydantic Logfire successfully configured with cloud token.")
     else:
         # Local console instrumentation mode if no cloud token provided
         logfire.configure(send_to_logfire=False)
+        try:
+            logfire.instrument_pydantic()
+        except Exception:
+            pass
         _logfire_initialized = True
         logger.info("ℹ️ Logfire running in local capture mode (set LOGFIRE_TOKEN for cloud dashboard).")
 except Exception as e:
